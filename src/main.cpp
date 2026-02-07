@@ -360,6 +360,92 @@ void Rook::recompute() {
     }
 }
 
+
+void Bishop::update(Move& m) {
+    bool check = false;
+    for (Pos* p:valid_pos){
+        if(*p == m.from || *p == m.to){
+            check = true;
+        }
+    }
+    if(!check)return;
+
+    this->recompute();
+}
+    
+void Bishop::recompute() {
+
+    for(auto* p : valid_pos){
+        delete p;
+    }
+
+    valid_pos.clear();
+
+    // up-right
+    for(int j=0;j<8;j++){
+
+        if(board->at(pos->x + j, pos->y + j)->p){
+            if(board->at(pos->x + j, pos->y + j)->p->white == white){
+                    
+            }else{
+                valid_pos.push_back(board->at(pos->x + j, pos->y + j)->p->pos);
+            }
+            break;
+        }else{
+            valid_pos.push_back(board->at(pos->x + j, pos->y + j)->p->pos);
+        }
+
+    }
+    
+    // up-left
+    for(int j=0;j<8;j++){
+
+        if(board->at(pos->x - j, pos->y + j)->p){
+            if(board->at(pos->x - j, pos->y + j)->p->white == white){
+                    
+            }else{
+                valid_pos.push_back(board->at(pos->x - j, pos->y + j)->p->pos);
+            }
+            break;
+        }else{
+            valid_pos.push_back(board->at(pos->x - j, pos->y + j)->p->pos);
+        }
+
+    }
+
+    // down-right
+   for(int j=0;j<8;j++){
+
+        if(board->at(pos->x + j, pos->y - j)->p){
+            if(board->at(pos->x + j, pos->y - j)->p->white == white){
+                    
+            }else{
+                valid_pos.push_back(board->at(pos->x + j, pos->y - j)->p->pos);
+            }
+            break;
+        }else{
+            valid_pos.push_back(board->at(pos->x + j, pos->y - j)->p->pos);
+        }
+
+    }
+
+    // down-left
+    for(int j=0;j<8;j++){
+
+        if(board->at(pos->x - j, pos->y - j)->p){
+            if(board->at(pos->x - j, pos->y - j)->p->white == white){
+                    
+            }else{
+                valid_pos.push_back(board->at(pos->x - j, pos->y - j)->p->pos);
+            }
+            break;
+        }else{
+            valid_pos.push_back(board->at(pos->x - j, pos->y - j)->p->pos);
+        }
+
+    }
+}
+
 int main(){
 
     Chessboard board;

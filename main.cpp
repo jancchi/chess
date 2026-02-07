@@ -1,5 +1,8 @@
+#include <bits/monostate.h>
+#include <cstdlib>
 #include <iostream>
 
+#include <string>
 #include <vector>
 #include <unistd.h>
 //#include "Chessboard.cpp"
@@ -55,7 +58,9 @@ public:
 
     virtual char ch() const = 0;
 
-    virtual void update(Move&) const = 0;
+    virtual void update(Move&) = 0;
+
+    virtual void recompute() = 0;
 
     Piece(bool white, Pos* p) : pos(p),white(white) {}
 
@@ -72,9 +77,9 @@ public:
 
     char ch() const override{ return (white) ? 'R' : 'r'; }
 
+    void update(Move& m) override;
     
-    void update(Move& m) const override;
-    
+    void recompute() override;
 };
 
 class Bishop : public Piece{
@@ -83,9 +88,10 @@ public:
     using Piece::Piece;
 
     char ch() { return (white) ? 'B' : 'b'; }
-
+  
+    void update(Move& m) override;
     
-    void update(Move& m) const override;
+    void recompute() override;
 };
 
 class Pos{
@@ -176,7 +182,7 @@ public:
                 pixels.at(j).at(i) = new Pos(i + 48, j);
             }  
         }
-        Rook r()
+        Rook r(true, at(4, 4));
     }
 
     Pos* at(int x, int y){
@@ -201,6 +207,10 @@ public:
 
     Player* white;
     Player* black;
+
+    Pos* at(int x, int y){
+        return grid.at(x, y);
+    }
 
     void init(Player* white,Player* black){
 
@@ -241,7 +251,19 @@ public:
 
     void handle_move(Move m, string col){
 
-        
+        if(col == "white"){
+            for(Piece* p : white->pieces){
+                p->update(m);
+            }
+        }
+        else if(col == "black"){
+            for(Piece* p : white->pieces){
+                p->update(m);
+            }
+        }else {
+            cerr << "Failed";
+            abort();
+        }
     }
 
 
@@ -253,13 +275,90 @@ public:
 
 
 
-void Rook::update(Move& m) const {
+void Rook::update(Move& m) {
+    bool check = false;
     for (Pos* p:valid_pos){
-        if(*p == m.from);
+        if(*p == m.from || *p == m.to){
+            check = true;
+        }
     }
+    if(!check)return;
 
+    this->recompute();
 }
     
+void Rook::recompute() {
+
+    for(auto* p : valid_pos){
+        delete p;
+    }
+
+    valid_pos.clear();
+
+    // right
+    for(int j=pos->x;j<8;j++){
+
+        if(board->at(j, pos->y)->p){
+            if(board->at(j, pos->y)->p->white == white){
+                    
+            }else{
+                valid_pos.push_back(board->at(j, pos->y)->p->pos);
+            }
+            break;
+        }else{
+            valid_pos.push_back(board->at(j, pos->y)->p->pos);
+        }
+
+    }
+    
+    // left
+    for(int j=pos->x;j>=0;j--){
+
+        if(board->at(j, pos->y)->p){
+            if(board->at(j, pos->y)->p->white == white){
+                    
+            }else{
+                valid_pos.push_back(board->at(j, pos->y)->p->pos);
+            }
+            break;
+        }else{
+            valid_pos.push_back(board->at(j, pos->y)->p->pos);
+        }
+
+    }
+
+    // up
+    for(int j=pos->y;j<8;j++){
+
+        if(board->at(pos->x, j)->p){
+            if(board->at(pos->x, j)->p->white == white){
+                    
+            }else{
+                valid_pos.push_back(board->at(pos->x, j)->p->pos);
+            }
+            break;
+        }else{
+            valid_pos.push_back(board->at(pos->x, j)->p->pos);
+        }
+
+    }
+
+    // down
+    for(int j=pos->y;j>=0;j--){
+
+        if(board->at(pos->x, j)->p){
+            if(board->at(pos->x, j)->p->white == white){
+                    
+            }else{
+                valid_pos.push_back(board->at(pos->x, j)->p->pos);
+            }
+            break;
+        }else{
+            valid_pos.push_back(board->at(pos->x, j)->p->pos);
+        }
+
+    }
+}
 
 int main(){
 

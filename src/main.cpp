@@ -75,6 +75,8 @@ public:
     
     using Piece::Piece;
 
+    static Chessboard* board;
+
     char ch() const override{ return (white) ? 'R' : 'r'; }
 
     void update(Move& m) override;
@@ -87,6 +89,8 @@ public:
     
     using Piece::Piece;
 
+    static Chessboard* board;
+
     char ch() { return (white) ? 'B' : 'b'; }
   
     void update(Move& m) override;
@@ -97,12 +101,13 @@ public:
 class Pos{
 public:
 
+    char pixel;
     char c;
     int y;
     int x;
     Piece* p;
 
-    Pos(char c, int p, Piece* pic = nullptr) {
+    Pos(char c, int p, Piece* pic = nullptr, char pix = ' ') {
         if(p < 0 || p > 8){
             cerr << "\nWrong char";
             abort();
@@ -115,10 +120,11 @@ public:
 
         this->y = get_num(c);
         this->c = c;
-        if(!pic) {
-            c = ' ';
+
+        if(pic){
+            pixel = pic->ch();
         }else{
-            c = pic->ch();
+            pixel = pix;
         }
 
     }
@@ -176,10 +182,14 @@ public:
 
     vector<vector<Pos*>> pixels;
 
+    
     Grid(){
+        pixels.resize(8);
         for(int i=0;i<8;i++){
+            pixels.at(i).resize(8);
             for(int j=0;j<8;j++){
-                pixels.at(j).at(i) = new Pos(i + 48, j);
+                //cout << "i + 48 is: " << char(i + 97) << "\n";
+                pixels.at(i).at(j) = new Pos(char(i + 97), j);
             }  
         }
         Rook r(true, at(4, 4));
@@ -199,9 +209,9 @@ class Chessboard{
 
 public:
 
-    Grid grid;
+    Grid* grid;
 
-    Chessboard() {}
+    Chessboard(Grid* g) : grid(g) {}
 
     bool mate = false;
 
@@ -209,41 +219,52 @@ public:
     Player* black;
 
     Pos* at(int x, int y){
-        return grid.at(x, y);
+        return grid->at(x, y);
     }
 
     void init(Player* white,Player* black){
 
-        grid.pixels.clear();
+        cout << "Init started\n";
+
+        grid->pixels.clear();
         this->white = white;
         this->black = black;
 
         this->white->pieces.clear();
         this->black->pieces.clear();
 
-
-        grid.pixels.resize(8);
+        cout << "Creating pixels\n";
+        grid->pixels.resize(8);
         for(int i =0;i<8;i++){
-            grid.pixels.at(i).resize(8);
-            
+            grid->pixels.at(i).resize(8);
+            for(int j=0;j<8;j++){
+                grid->pixels.at(i).at(j) = new Pos(char(i + 97), j, nullptr, ' ');
+            }  
         }
+
+        at(4,4)->pixel = 'p';
 
         this->white->pieces.resize(16);
         this->black->pieces.resize(16);
         
         
-
-        this->white->pieces.at(0) = new Rook(true, grid.at(get_num('a'), 0));
-        this->white->pieces.at(1) = new Rook(true, grid.at(get_num('a'), 7));
+        cout << "Creating pieces\n";
+        this->white->pieces.at(0) = new Rook(true, grid->at(get_num('a'), 0));
+        this->white->pieces.at(1) = new Rook(true, grid->at(get_num('a'), 7));
 
     }
 
     void show(){
+        cout << "\ngrid pixels has size: " << grid->pixels.size();
+
         cout << "----------------\n";
-        for(vector<Pos*> v : grid.pixels){
+        for(vector<Pos*>& v : grid->pixels){
             cout << "|";
-            for(Pos* p : v){
-                cout << p->c << "|";
+            for(int i =0;i<v.size();i++){
+                if(!v.at(i)){
+                    cerr << "nullptr";
+                }
+                cout << v.at(i)->pixel << "|";
             }
             cout << "\n----------------\n";
         }
@@ -446,16 +467,30 @@ void Bishop::recompute() {
     }
 }
 
+Chessboard* Rook::board = nullptr;
+
+Chessboard* Bishop::board = nullptr;
+
 int main(){
 
-    Chessboard board;
-cout << "Hello";
+    Grid g;
+
+    Chessboard board(&g);
+    
+    Rook::board = &board;
+    Bishop::board = &board;
+
+    cout << "Hello";
+    
     Player* p1 = new Player();
 
     Player* p2 = new Player();
 
     board.init(p1,p2);
     
+    cout <<"Starting loop\n";
+    sleep(2);
+
     bool is_white = true;
     while(!board.mate){
         board.show();

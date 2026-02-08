@@ -1,0 +1,3 @@
+/home/admin/git/Chess/build/CMakeFiles/MyApp.dir
+/home/admin/git/Chess/build/CMakeFiles/edit_cache.dir
+/home/admin/git/Chess/build/CMakeFiles/rebuild_cache.dir

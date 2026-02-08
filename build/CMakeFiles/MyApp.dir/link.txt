@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/MyApp.dir/link.d CMakeFiles/MyApp.dir/src/main.cpp.o -o MyApp  -Wl,-rpath,/opt/sfml2/lib /opt/sfml2/lib/libsfml-graphics.so.2.6.2 /opt/sfml2/lib/libsfml-window.so.2.6.2 /opt/sfml2/lib/libsfml-system.so.2.6.2

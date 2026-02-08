@@ -1,15 +1,17 @@
-#include <bits/monostate.h>
-#include <cstdlib>
+#include <SFML/Graphics/RectangleShape.hpp>
+#include <functional>
 #include <iostream>
-
 #include <string>
 #include <vector>
 #include <unistd.h>
-//#include "Chessboard.cpp"
+
+#include <SFML/Graphics.hpp>
 
 using namespace std;
 
 const char abc[8] = {'a','b','c','d','e','f','g','h'};
+
+const float TILE_SIZE = 100.f;
 
 // Return true if char in a-h
 bool check_abc(char c){
@@ -60,6 +62,8 @@ public:
 
     virtual void update(Move&) = 0;
 
+    virtual bool check_pos_and_handle_it(int x, int y) = 0;
+
     virtual void recompute() = 0;
 
     Piece(bool white, Pos* p) : pos(p),white(white) {}
@@ -81,6 +85,8 @@ public:
 
     void update(Move& m) override;
     
+    bool check_pos_and_handle_it(int x, int y) override;
+
     void recompute() override;
 };
 
@@ -95,6 +101,8 @@ public:
   
     void update(Move& m) override;
     
+    bool check_pos_and_handle_it(int x, int y) override;
+    
     void recompute() override;
 };
 
@@ -106,6 +114,7 @@ public:
     int y;
     int x;
     Piece* p;
+    sf::RectangleShape rect;
 
     Pos(char c, int p, Piece* pic = nullptr, char pix = ' ') {
         if(p < 0 || p > 8){
@@ -133,6 +142,14 @@ public:
 
     bool operator==(Pos& other){
         return (other.x == x && other.y == y);
+    }
+
+    void set_p(Piece* p){
+        this->p = p;
+        pixel = p->ch();
+        x = p->pos->x;
+        y = p->pos->y;
+        c = p->pos->c;
     }
 };
 
@@ -239,10 +256,11 @@ public:
             grid->pixels.at(i).resize(8);
             for(int j=0;j<8;j++){
                 grid->pixels.at(i).at(j) = new Pos(char(i + 97), j, nullptr, ' ');
+
+                grid->pixels.at(i).at(j)->rect.setSize({TILE_SIZE,TILE_SIZE});
+                grid->pixels.at(i).at(j)->rect.setOutlineThickness(0.5);
             }  
         }
-
-        at(4,4)->pixel = 'p';
 
         this->white->pieces.resize(16);
         this->black->pieces.resize(16);
@@ -252,22 +270,31 @@ public:
         this->white->pieces.at(0) = new Rook(true, grid->at(get_num('a'), 0));
         this->white->pieces.at(1) = new Rook(true, grid->at(get_num('a'), 7));
 
+        at(4,4)->set_p( this->white->pieces.at(0));
+        at(4,1)->set_p( this->white->pieces.at(1));
+
+
+        at(0,0)->pixel = '0';
+
     }
 
     void show(){
         cout << "\ngrid pixels has size: " << grid->pixels.size();
 
         cout << "----------------\n";
-        for(vector<Pos*>& v : grid->pixels){
-            cout << "|";
+        char c = 104;
+        for(int j=0;j<8;j++){
+            vector<Pos*>& v = grid->pixels.at(j); 
+            cout << "|" << c-- << "|";
             for(int i =0;i<v.size();i++){
                 if(!v.at(i)){
-                    cerr << "nullptr";
+                    cerr << "v at(" << i << ") is nullptr";
                 }
                 cout << v.at(i)->pixel << "|";
             }
             cout << "\n----------------\n";
         }
+        cout << "| |1|2|3|4|5|6|7|8|\n";
     }
 
     void handle_move(Move m, string col){
@@ -308,6 +335,34 @@ void Rook::update(Move& m) {
     this->recompute();
 }
     
+// return true when break
+bool Rook::check_pos_and_handle_it(int x, int y){
+    if(board->at(x, y)->p){
+        if(board->at(x, y)->p->white == white){
+                    
+        }else{
+            valid_pos.push_back(board->at(x, y)->p->pos);
+        }
+        return true;
+    }else{
+        valid_pos.push_back(board->at(x, y)->p->pos);
+    }
+    return false;
+}
+// return true when break
+bool Bishop::check_pos_and_handle_it(int x, int y){
+    if(board->at(x, y)->p){
+        if(board->at(x, y)->p->white == white){
+                    
+        }else{
+            valid_pos.push_back(board->at(x, y)->p->pos);
+        }
+        return true;
+    }else{
+        valid_pos.push_back(board->at(x, y)->p->pos);
+    }
+    return false;
+}
 void Rook::recompute() {
 
     for(auto* p : valid_pos){
@@ -316,66 +371,39 @@ void Rook::recompute() {
 
     valid_pos.clear();
 
-    // right
-    for(int j=pos->x;j<8;j++){
 
-        if(board->at(j, pos->y)->p){
-            if(board->at(j, pos->y)->p->white == white){
-                    
-            }else{
-                valid_pos.push_back(board->at(j, pos->y)->p->pos);
-            }
+    // right
+    for(int j=pos->x + 1;j<8;j++){
+
+        if(check_pos_and_handle_it(j, pos->y)){
             break;
-        }else{
-            valid_pos.push_back(board->at(j, pos->y)->p->pos);
         }
 
     }
     
     // left
-    for(int j=pos->x;j>=0;j--){
+    for(int j=pos->x - 1;j>=0;j--){
 
-        if(board->at(j, pos->y)->p){
-            if(board->at(j, pos->y)->p->white == white){
-                    
-            }else{
-                valid_pos.push_back(board->at(j, pos->y)->p->pos);
-            }
+        if(check_pos_and_handle_it(j, pos->y)){
             break;
-        }else{
-            valid_pos.push_back(board->at(j, pos->y)->p->pos);
         }
 
     }
 
     // up
-    for(int j=pos->y;j<8;j++){
+    for(int j=pos->y + 1;j<8;j++){
 
-        if(board->at(pos->x, j)->p){
-            if(board->at(pos->x, j)->p->white == white){
-                    
-            }else{
-                valid_pos.push_back(board->at(pos->x, j)->p->pos);
-            }
+        if(check_pos_and_handle_it(pos->x, j)){
             break;
-        }else{
-            valid_pos.push_back(board->at(pos->x, j)->p->pos);
         }
 
     }
 
     // down
-    for(int j=pos->y;j>=0;j--){
+    for(int j=pos->y - 1;j>=0;j--){
 
-        if(board->at(pos->x, j)->p){
-            if(board->at(pos->x, j)->p->white == white){
-                    
-            }else{
-                valid_pos.push_back(board->at(pos->x, j)->p->pos);
-            }
+        if(check_pos_and_handle_it(pos->x, j)){
             break;
-        }else{
-            valid_pos.push_back(board->at(pos->x, j)->p->pos);
         }
 
     }
@@ -403,65 +431,37 @@ void Bishop::recompute() {
     valid_pos.clear();
 
     // up-right
-    for(int j=0;j<8;j++){
+    for(int j=1;pos->x + j < 8 && pos->y + j < 8;j++){
 
-        if(board->at(pos->x + j, pos->y + j)->p){
-            if(board->at(pos->x + j, pos->y + j)->p->white == white){
-                    
-            }else{
-                valid_pos.push_back(board->at(pos->x + j, pos->y + j)->p->pos);
-            }
+        if(check_pos_and_handle_it(pos->x + j,pos->y + j)){
             break;
-        }else{
-            valid_pos.push_back(board->at(pos->x + j, pos->y + j)->p->pos);
         }
 
     }
     
     // up-left
-    for(int j=0;j<8;j++){
+    for(int j=1;pos->x - j >= 0 && pos->y + j < 8;j++){
 
-        if(board->at(pos->x - j, pos->y + j)->p){
-            if(board->at(pos->x - j, pos->y + j)->p->white == white){
-                    
-            }else{
-                valid_pos.push_back(board->at(pos->x - j, pos->y + j)->p->pos);
-            }
+        if(check_pos_and_handle_it(pos->x - j,pos->y + j)){
             break;
-        }else{
-            valid_pos.push_back(board->at(pos->x - j, pos->y + j)->p->pos);
         }
 
     }
 
     // down-right
-   for(int j=0;j<8;j++){
+    for(int j=1;pos->x + j < 8 && pos->y - j >= 0;j++){
 
-        if(board->at(pos->x + j, pos->y - j)->p){
-            if(board->at(pos->x + j, pos->y - j)->p->white == white){
-                    
-            }else{
-                valid_pos.push_back(board->at(pos->x + j, pos->y - j)->p->pos);
-            }
+        if(check_pos_and_handle_it(pos->x + j,pos->y - j)){
             break;
-        }else{
-            valid_pos.push_back(board->at(pos->x + j, pos->y - j)->p->pos);
         }
 
     }
 
     // down-left
-    for(int j=0;j<8;j++){
+    for(int j=1;pos->x - j >= 0 && pos->y - j >= 0;j++){
 
-        if(board->at(pos->x - j, pos->y - j)->p){
-            if(board->at(pos->x - j, pos->y - j)->p->white == white){
-                    
-            }else{
-                valid_pos.push_back(board->at(pos->x - j, pos->y - j)->p->pos);
-            }
+        if(check_pos_and_handle_it(pos->x - j,pos->y - j)){
             break;
-        }else{
-            valid_pos.push_back(board->at(pos->x - j, pos->y - j)->p->pos);
         }
 
     }
@@ -472,6 +472,8 @@ Chessboard* Rook::board = nullptr;
 Chessboard* Bishop::board = nullptr;
 
 int main(){
+
+    sf::RenderWindow entry(sf::VideoMode(TILE_SIZE * 8,TILE_SIZE * 8), "Chess");
 
     Grid g;
 
@@ -490,6 +492,19 @@ int main(){
     
     cout <<"Starting loop\n";
     sleep(2);
+
+    while (entry.isOpen()) {
+        sf::Event event;
+        while (entry.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                entry.close();
+        }
+
+        entry.clear();
+        entry.draw(shape);
+        entry.display();
+    }
+
 
     bool is_white = true;
     while(!board.mate){

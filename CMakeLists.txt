@@ -5,6 +5,11 @@ set(SFML_DIR "/opt/sfml2/lib/cmake/SFML/")
 
 find_package(SFML 2.6 COMPONENTS graphics window system REQUIRED)
 
-add_executable(MyApp src/main.cpp)
+set(SOURCES
+    src/main.cpp
+    src/Backend.cpp
+)
+
+add_executable(MyApp ${SOURCES})
 
 target_link_libraries(MyApp sfml-graphics sfml-window sfml-system)

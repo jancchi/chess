@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SFML/Graphics.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -8,27 +9,36 @@
 #ifndef BACKEND
 #define BACKEND
 
-#include <SFML/Graphics.hpp>
+#include <filesystem>
+#include <iostream>
 #include <string>
 #include <vector>
 
+class Chessboard;
 using namespace std;
 
 const float TILE_SIZE = 100.f;
 
-// Return true if char in a-h
+/**
+ * @brief Checks if char is a-h
+ * @param c Character to check
+ * @return True if char is a-h
+ */
 bool check_abc(char c);
 
+/**
+ * @brief Get number from character a = 1
+ * @param c A character to convert
+ * @return A number representing the character (a = 1)
+ */
 int get_num(char c);
 
 class Pos;
+class Move;
 
-Pos get_pos(sf::Vector2i cord, sf::RenderWindow *);
+Pos get_pos(sf::Vector2i cord,const sf::RenderWindow *);
 
 Pos get_pos(float, float);
-
-class Move;
-class Chessboard;
 
 class Piece {
 
@@ -51,27 +61,45 @@ public:
 
   virtual void update(Move &) = 0;
 
-  virtual bool check_pos_and_handle_it(int x, int y) = 0;
+  bool check_pos_and_handle_it(int x, int y);
 
   virtual void recompute() = 0;
 
-  Piece(bool white, Pos *p) : pos(p), white(white) {
-    sf::Texture s;
-    s.loadFromFile("chess_pieces_sprite.png");
-    sprite.setTexture(texture);
-    sprite.setTextureRect(sf::IntRect(0, 0, 60, 60));
-  }
+  void virtual move(Pos *pos);
 
-  ~Piece() {
+  Piece(bool white, Pos* pos) : white(white) ,pos(pos) {}
+
+  virtual ~Piece() {
     for (Pos *p : valid_pos) {
       p = nullptr;
     }
   }
+
+  bool is_valid(const Pos *pos) const;
+
+};
+class Pawn : public Piece {
+public:
+
+  bool in_start_pos = true;
+
+  Pawn(bool white, Pos* pos);
+
+  static Chessboard *board;
+
+  char ch() const override { return (white) ? 'P' : 'p'; }
+
+  void update(Move &m) override;
+
+  void recompute() override;
+
+  void move(Pos *pos) override;
 };
 
 class Rook : public Piece {
 public:
-  using Piece::Piece;
+
+  Rook(bool white, Pos* pos);
 
   static Chessboard *board;
 
@@ -79,14 +107,12 @@ public:
 
   void update(Move &m) override;
 
-  bool check_pos_and_handle_it(int x, int y) override;
-
   void recompute() override;
 };
 
 class Bishop : public Piece {
 public:
-  using Piece::Piece;
+  Bishop(bool white, Pos *pos);
 
   static Chessboard *board;
 
@@ -94,14 +120,12 @@ public:
 
   void update(Move &m) override;
 
-  bool check_pos_and_handle_it(int x, int y) override;
-
   void recompute() override;
 };
 
 class Knight : public Piece {
 public:
-  using Piece::Piece;
+  Knight(bool white, Pos *pos);
 
   static Chessboard *board;
 
@@ -109,14 +133,13 @@ public:
 
   void update(Move &m) override;
 
-  bool check_pos_and_handle_it(int x, int y) override;
-
   void recompute() override;
 };
 
 class Queen : public Piece {
 public:
-  using Piece::Piece;
+
+  Queen(bool white, Pos *pos);
 
   static Chessboard *board;
 
@@ -124,22 +147,23 @@ public:
 
   void update(Move &m) override;
 
-  bool check_pos_and_handle_it(int x, int y) override;
-
   void recompute() override;
 };
 
 class King : public Piece {
 public:
-  using Piece::Piece;
+
+  bool in_check = false;
+
+  bool check_expanded(int x, int y);
+
+  King(bool white, Pos *pos);
 
   static Chessboard *board;
 
   char ch() const override { return (white) ? 'K' : 'k'; }
 
   void update(Move &m) override;
-
-  bool check_pos_and_handle_it(int x, int y) override;
 
   void recompute() override;
 };
@@ -157,7 +181,7 @@ public:
 
   Pos() : c('0'), y(0), x(0) {}
 
-  bool operator==(Pos &other) { return (other.x == x && other.y == y); }
+  bool operator==(const Pos &other) const { return (other.x == x && other.y == y); }
 
   void set_p(Piece *p) {
     this->p = p;
@@ -178,6 +202,11 @@ public:
     this->to = Pos(to, i_to);
   }
 
+  Move(Pos from, Pos to) {
+    this->from = from;
+    this->to = to;
+  }
+
   Move() : from(Pos()), to(Pos()) {}
 };
 
@@ -186,6 +215,8 @@ Move get_move();
 class Player {
 public:
   vector<Piece *> pieces;
+
+  King* king;
 };
 
 class Grid {
@@ -194,7 +225,8 @@ public:
 
   Grid();
 
-  Pos *at(int x, int y);
+  [[nodiscard("Dont forget to use the object")]]
+  Pos *at(const int x,const  int y) const;
 };
 
 class Chessboard {
@@ -209,13 +241,17 @@ public:
   Player *white;
   Player *black;
 
-  Pos *at(int x, int y) { return grid->at(x, y); }
-  Pos *at(sf::Vector2i vec) { return grid->at(vec.x, vec.y); }
-  Pos *at(Pos p) { return grid->at(p.x, p.y); }
+  [[nodiscard("Dont forget to use the object")]]
+  Pos *at(const int x,const  int y) const { return grid->at(x, y); }
+
+  [[nodiscard("Dont forget to use the object")]]
+  Pos *at(const sf::Vector2i vec) const { return grid->at(vec.x, vec.y); }
+  [[nodiscard("Dont forget to use the object")]]
+  Pos *at(const Pos p) const { return grid->at(p.x, p.y); }
 
   void init(Player *white, Player *black);
 
-  void show();
-  void handle_move(Move m, string col);
+  void show() const;
+  void handle_move(Move m);
 };
 #endif

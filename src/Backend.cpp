@@ -9,13 +9,13 @@
 
 using namespace std;
 
-const char abc[8] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
+constexpr char abc[8] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
 
-Pos get_pos(sf::Vector2i cord, sf::RenderWindow *window) {
+Pos get_pos(sf::Vector2i cord, const sf::RenderWindow *window) {
   Pos pos;
 
   cord = static_cast<sf::Vector2i>(
-      window->mapPixelToCoords(sf::Mouse::getPosition()));
+      window->mapPixelToCoords(sf::Mouse::getPosition(*window)));
 
   pos.x = (int)cord.x / (int)TILE_SIZE;
 
@@ -32,12 +32,10 @@ Pos get_pos(sf::Vector2i cord, sf::RenderWindow *window) {
   return pos;
 }
 
-Pos get_pos(float x, float y) { return Pos(); }
-
 // Return true if char in a-h
-bool check_abc(char c) {
+bool check_abc(const char c) {
 
-  for (char t : abc) {
+  for (const char t : abc) {
     if (c == t) {
       return true;
     }
@@ -46,11 +44,10 @@ bool check_abc(char c) {
   return false;
 }
 
-int get_num(char c) {
+int get_num(const char c) {
   if (!check_abc(c)) {
     std::cerr << "\nInvalid char";
     abort();
-    return -1;
   }
 
   for (int i = 0; i < 8; i++) {
@@ -61,24 +58,24 @@ int get_num(char c) {
   return -1;
 }
 
-Pos::Pos(char c, int p, Piece *pic, char pix) {
-  if (p < 0 || p > 8) {
-    cerr << "\nWrong char";
-    abort();
-  }
-
+Pos::Pos(char c, int y, Piece *p, char pixel) {
   if (!check_abc(c)) {
     cerr << "\nWrong char";
     abort();
   }
-
-  this->y = get_num(c);
+  if (y < 0 || y > 8) {
+    cerr << "\nWrong pos";
+    abort();
+  }
+  this->x = get_num(c);
   this->c = c;
+  this->y = y;
 
-  if (pic) {
-    pixel = pic->ch();
+  if (p) {
+    this->pixel = p->ch();
+    this->p = p;
   } else {
-    pixel = pix;
+    this->pixel = pixel;
   }
 }
 
@@ -98,7 +95,7 @@ Move get_move() {
   int i_to;
   cin >> i_to;
 
-  return Move(from, i_from, to, i_to);
+  return {from, i_from, to, i_to};
 }
 
 Grid::Grid() {
@@ -106,18 +103,22 @@ Grid::Grid() {
   for (int i = 0; i < 8; i++) {
     pixels.at(i).resize(8);
     for (int j = 0; j < 8; j++) {
-      // cout << "i + 48 is: " << char(i + 97) << "\n";
       pixels.at(i).at(j) = new Pos(char(i + 97), j);
     }
   }
-  Rook r(true, at(4, 4));
 }
 
-Pos *Grid::at(int x, int y) {
+Pos *Grid::at(const int x,const int y) const {
   if (x < 0 || x > 7 || y < 0 || y > 7) {
     cerr << "Wrong index in Grid::at()";
     abort();
   }
+
+  if (!pixels.at(y).at(x)) {
+    cerr << "\nInvalid pos in Grid::at()";
+    abort();
+  }
+
   return pixels.at(y).at(x);
 }
 
@@ -138,7 +139,7 @@ void Chessboard::init(Player *white, Player *black) {
   for (int i = 0; i < 8; i++) {
     grid->pixels.at(i).resize(8);
     for (int j = 0; j < 8; j++) {
-      grid->pixels.at(i).at(j) = new Pos(char(i + 97), j, nullptr, ' ');
+      grid->pixels.at(i).at(j) = new Pos(char(j + 97), i, nullptr, ' ');
 
       grid->pixels.at(i).at(j)->rect.setSize({TILE_SIZE, TILE_SIZE});
       grid->pixels.at(i).at(j)->rect.setOutlineThickness(-0.5);
@@ -150,29 +151,70 @@ void Chessboard::init(Player *white, Player *black) {
 
       grid->pixels.at(i).at(j)->rect.setPosition(
           {TILE_SIZE * j, TILE_SIZE * i});
-
-      grid->pixels.at(i).at(j)->p->sprite.setPosition(
-          grid->pixels.at(i).at(j)->rect.getPosition());
     }
     pixel_white = !pixel_white;
   }
-
+/*
   this->white->pieces.resize(16);
   this->black->pieces.resize(16);
 
   cout << "Creating pieces\n";
-  this->white->pieces.at(0) = new Rook(true, grid->at(get_num('a'), 0));
-  this->white->pieces.at(1) = new Rook(true, grid->at(get_num('a'), 7));
-  this->white->pieces.at(2) = new Bishop(true, at(get_num('a'), 2));
-  this->white->pieces.at(3) = new Bishop(true, at(get_num('a'), 5));
+  this->white->pieces.at(0) = new Rook(true, grid->at(get_num('a'), 7));
+  this->white->pieces.at(1) = new Rook(true, grid->at(get_num('h'), 7));
+  this->white->pieces.at(2) = new Bishop(true, at(get_num('c'), 7));
+  this->white->pieces.at(3) = new Bishop(true, at(get_num('f'), 7));
+  this->white->pieces.at(4) = new Knight(true, at(get_num('b'), 7));
+  this->white->pieces.at(5) = new Knight(true, at(get_num('g'), 7));
+  this->white->pieces.at(6) = new Queen(true, at(get_num('d'), 7));
+  this->white->pieces.at(7) = new King(true, at(get_num('e'), 7));
 
-  at(4, 4)->set_p(this->white->pieces.at(0));
-  at(4, 1)->set_p(this->white->pieces.at(1));
+  for (int i =0;i<8;i++) {
+    this->white->pieces.at(8 + i) = new Pawn(true, at(i,6));
+  }
 
-  at(0, 0)->pixel = '0';
+  // black
+  this->black->pieces.at(0) = new Rook(false, grid->at(get_num('a'), 0));
+  this->black->pieces.at(1) = new Rook(false, grid->at(get_num('h'), 0));
+  this->black->pieces.at(2) = new Bishop(false, at(get_num('c'), 0));
+  this->black->pieces.at(3) = new Bishop(false, at(get_num('f'), 0));
+  this->black->pieces.at(4) = new Knight(false, at(get_num('b'), 0));
+  this->black->pieces.at(5) = new Knight(false, at(get_num('g'), 0));
+  this->black->pieces.at(6) = new Queen(false, at(get_num('e'), 0));
+  this->black->pieces.at(7) = new King(false, at(get_num('d'), 0));
+
+  for (int i =0;i<8;i++) {
+    this->black->pieces.at(8 + i) = new Pawn(false, at(i,1));
+  }
+
+  this->white->king = dynamic_cast<King*>(this->white->pieces.at(7));
+  this->black->king = dynamic_cast<King*>(this->black->pieces.at(7));
+*/
+  King* wking = new King(true, at(get_num('d'), 4));
+  this->white->pieces.push_back(wking);
+  this->white->king = wking;
+
+  King* bking = new King(false, at(get_num('e'), 6));
+  this->white->pieces.push_back(bking);
+  this->black->king = bking;
+
+  Pawn* wpawn = new Pawn(true, at(get_num('d'), 2));
+  this->white->pieces.push_back(wpawn);
+
+  for (Piece* p : this->black->pieces) {
+    p->recompute();
+    p->sprite.setTexture(p->texture);
+    p->sprite.setPosition(p->pos->rect.getPosition());
+  }
+
+  for (Piece* p : this->white->pieces) {
+    p->recompute();
+    p->sprite.setTexture(p->texture);
+    p->sprite.setPosition(p->pos->rect.getPosition());
+  }
+
 }
 
-void Chessboard::show() {
+void Chessboard::show() const {
   cout << "\ngrid pixels has size: " << grid->pixels.size();
 
   cout << "----------------\n";
@@ -191,25 +233,122 @@ void Chessboard::show() {
   cout << "| |1|2|3|4|5|6|7|8|\n";
 }
 
-void Chessboard::handle_move(Move m, string col) {
-
-  if (col == "white") {
-    for (Piece *p : white->pieces) {
+void Chessboard::handle_move(Move m) {
+  for (Piece *p : white->pieces) {
       p->update(m);
-    }
-  } else if (col == "black") {
-    for (Piece *p : white->pieces) {
+  }
+  for (Piece *p : black->pieces) {
       p->update(m);
-    }
-  } else {
-    cerr << "Failed";
-    abort();
   }
 }
 
+
+bool Piece::is_valid(const Pos *pos) const {
+  for (const Pos* p : valid_pos) {
+    if (p == pos)return true;
+  }
+  return false;
+}
 // **************************************8 Update
 
+Pawn::Pawn(bool white, Pos *pos) : Piece(white, pos) {
+  cout << "\nCurrent path is: " << filesystem::current_path() << endl;
+  texture.loadFromFile("chess_pieces_sprite.png", sf::IntRect(275, (white) ? 0 : 55, 55, 50));
+  sprite.setTexture(texture);
+  sprite.setScale(2,2);
+  pos->set_p(this);
+  this->pos = pos;
+}
+
+Rook::Rook(bool white, Pos *pos) : Piece(white, pos) {
+  cout << "\nCurrent path is: " << filesystem::current_path() << endl;
+  texture.loadFromFile("chess_pieces_sprite.png", sf::IntRect(220, (white) ? 0 : 55, 55, 50));
+  sprite.setTexture(texture);
+  sprite.setScale(2,2);
+  pos->set_p(this);
+  this->pos = pos;
+}
+
+Bishop::Bishop(bool white, Pos *pos) : Piece(white, pos) {
+  cout << "\nCurrent path is: " << filesystem::current_path() << endl;
+  texture.loadFromFile("chess_pieces_sprite.png", sf::IntRect(110, (white) ? 0 : 55, 55, 50));
+  sprite.setTexture(texture);
+  sprite.setScale(2,2);
+  pos->set_p(this);
+  this->pos = pos;
+}
+
+Knight::Knight(bool white, Pos *pos) : Piece(white, pos) {
+  cout << "\nCurrent path is: " << filesystem::current_path() << endl;
+  texture.loadFromFile("chess_pieces_sprite.png", sf::IntRect(165, (white) ? 0 : 55, 55, 50));
+  sprite.setTexture(texture);
+  sprite.setScale(2,2);
+  pos->set_p(this);
+  this->pos = pos;
+}
+
+King::King(bool white, Pos *pos) : Piece(white, pos) {
+  cout << "\nCurrent path is: " << filesystem::current_path() << endl;
+  texture.loadFromFile("chess_pieces_sprite.png", sf::IntRect(0, (white) ? 0 : 55, 55, 50));
+  sprite.setTexture(texture);
+  sprite.setScale(2,2);
+  pos->set_p(this);
+  this->pos = pos;
+}
+
+Queen::Queen(bool white, Pos *pos) : Piece(white, pos) {
+  cout << "\nCurrent path is: " << filesystem::current_path() << endl;
+  texture.loadFromFile("chess_pieces_sprite.png", sf::IntRect(55, (white) ? 0 : 55, 55, 50));
+  sprite.setTexture(texture);
+  sprite.setScale(2,2);
+  pos->set_p(this);
+  this->pos = pos;
+}
+
+void Piece::move(Pos* pos) {
+  this->pos->p = nullptr;
+  Pos prev = *this->pos;
+  this->pos = pos;
+  pos->set_p(this);
+  sprite.setPosition(pos->rect.getPosition());
+  Move m(prev, *pos);
+  board->handle_move(m);
+}
+void Pawn::move(Pos* pos) {
+  this->pos->p = nullptr;
+  Pos prev = *this->pos;
+  this->pos = pos;
+  pos->set_p(this);
+  in_start_pos = false;
+  sprite.setPosition(pos->rect.getPosition());
+  Move m(prev, *pos);
+  board->handle_move(m);
+}
+
+// return true when break
+bool Piece::check_pos_and_handle_it(int x, int y) {
+
+  if (x > 7 || y > 7 || x < 0 || y < 0) {
+    return true;
+  }
+
+  Pos* target = board->at(x, y);
+
+  if (target->p) {
+    if (target->p->white != this->white) {
+            board->white->king->recompute();
+      valid_pos.push_back(target->p->pos);
+    }
+    return true;
+  }
+
+  valid_pos.push_back(target);
+  return false;
+}
+// ------------------------------------------------------------------------------------------------------------------
+
 void Rook::update(Move &m) {
+  /*
   bool check = false;
   for (Pos *p : valid_pos) {
     if (*p == m.from || *p == m.to) {
@@ -218,111 +357,11 @@ void Rook::update(Move &m) {
   }
   if (!check)
     return;
-
+*/
   this->recompute();
 }
 
-// return true when break
-bool Rook::check_pos_and_handle_it(int x, int y) {
-
-  if (x > 7 || y > 7 || x < 0 || y < 0) {
-    return true;
-  }
-
-  if (board->at(x, y)->p) {
-    if (board->at(x, y)->p->white == white) {
-
-    } else {
-      valid_pos.push_back(board->at(x, y)->p->pos);
-    }
-    return true;
-  } else {
-    valid_pos.push_back(board->at(x, y)->p->pos);
-  }
-  return false;
-}
-// return true when break
-bool Bishop::check_pos_and_handle_it(int x, int y) {
-
-  if (x > 7 || y > 7 || x < 0 || y < 0) {
-    return true;
-  }
-
-  if (board->at(x, y)->p) {
-    if (board->at(x, y)->p->white == white) {
-
-    } else {
-      valid_pos.push_back(board->at(x, y)->p->pos);
-    }
-    return true;
-  } else {
-    valid_pos.push_back(board->at(x, y)->p->pos);
-  }
-  return false;
-}
-
-bool Knight::check_pos_and_handle_it(int x, int y) {
-
-  if (x > 7 || y > 7 || x < 0 || y < 0) {
-    return true;
-  }
-
-  if (board->at(x, y)->p) {
-    if (board->at(x, y)->p->white == white) {
-
-    } else {
-      valid_pos.push_back(board->at(x, y)->p->pos);
-    }
-    return true;
-  } else {
-    valid_pos.push_back(board->at(x, y)->p->pos);
-  }
-  return false;
-}
-
-bool Queen::check_pos_and_handle_it(int x, int y) {
-
-  if (x > 7 || y > 7 || x < 0 || y < 0) {
-    return true;
-  }
-
-  if (board->at(x, y)->p) {
-    if (board->at(x, y)->p->white == white) {
-
-    } else {
-      valid_pos.push_back(board->at(x, y)->p->pos);
-    }
-    return true;
-  } else {
-    valid_pos.push_back(board->at(x, y)->p->pos);
-  }
-  return false;
-}
-
-bool King::check_pos_and_handle_it(int x, int y) {
-
-  if (x > 7 || y > 7 || x < 0 || y < 0) {
-    return true;
-  }
-
-  if (board->at(x, y)->p) {
-    if (board->at(x, y)->p->white == white) {
-
-    } else {
-      valid_pos.push_back(board->at(x, y)->p->pos);
-    }
-    return true;
-  } else {
-    valid_pos.push_back(board->at(x, y)->p->pos);
-  }
-  return false;
-}
-
 void Rook::recompute() {
-
-  for (auto *p : valid_pos) {
-    delete p;
-  }
 
   valid_pos.clear();
 
@@ -360,23 +399,10 @@ void Rook::recompute() {
 }
 
 void Bishop::update(Move &m) {
-  bool check = false;
-  for (Pos *p : valid_pos) {
-    if (*p == m.from || *p == m.to) {
-      check = true;
-    }
-  }
-  if (!check)
-    return;
-
   this->recompute();
 }
 
 void Bishop::recompute() {
-
-  for (auto *p : valid_pos) {
-    delete p;
-  }
 
   valid_pos.clear();
 
@@ -414,23 +440,11 @@ void Bishop::recompute() {
 }
 
 void Knight::update(Move &m) {
-  bool check = false;
-  for (Pos *p : valid_pos) {
-    if (*p == m.from || *p == m.to) {
-      check = true;
-    }
-  }
-  if (!check)
-    return;
 
   this->recompute();
 }
 
 void Knight::recompute() {
-
-  for (auto *p : valid_pos) {
-    delete p;
-  }
 
   valid_pos.clear();
 
@@ -440,31 +454,19 @@ void Knight::recompute() {
   check_pos_and_handle_it(pos->x - 2, pos->y + 1);
   check_pos_and_handle_it(pos->x - 2, pos->y - 1);
 
-  check_pos_and_handle_it(pos->x + 1, pos->y + 1);
-  check_pos_and_handle_it(pos->x + 1, pos->y - 1);
+  check_pos_and_handle_it(pos->x + 1, pos->y + 2);
+  check_pos_and_handle_it(pos->x + 1, pos->y - 2);
 
-  check_pos_and_handle_it(pos->x - 1, pos->y + 1);
-  check_pos_and_handle_it(pos->x - 1, pos->y - 1);
+  check_pos_and_handle_it(pos->x - 1, pos->y + 2);
+  check_pos_and_handle_it(pos->x - 1, pos->y - 2);
 }
 
 void Queen::update(Move &m) {
-  bool check = false;
-  for (Pos *p : valid_pos) {
-    if (*p == m.from || *p == m.to) {
-      check = true;
-    }
-  }
-  if (!check)
-    return;
 
   this->recompute();
 }
 
 void Queen::recompute() {
-
-  for (auto *p : valid_pos) {
-    delete p;
-  }
 
   valid_pos.clear();
 
@@ -534,35 +536,183 @@ void Queen::recompute() {
 }
 
 void King::update(Move &m) {
-  bool check = false;
-  for (Pos *p : valid_pos) {
-    if (*p == m.from || *p == m.to) {
-      check = true;
+  this->recompute();
+}
+
+bool King::check_expanded(int x, int y) {
+
+  if (x < 0 || x >= 8 || y < 0 || y >= 8) {
+    return true;
+  }
+
+  Pos* temp = board->at(x,y);
+
+  if (temp->p) {
+    if (temp->p->white == white) {
+      return true;
     }
   }
-  if (!check)
-    return;
 
-  this->recompute();
+  bool is_defended = false;
+
+  for (Piece* piece : (white) ? board->black->pieces : board->white->pieces) {
+    if (piece->ch() == 'P') {
+      if (piece->pos->x + 1 < 8 && piece->pos->y - 1 >= 0) {
+        Pos* target = board->at(pos->x + 1, pos->y - 1);
+        if (temp == target) {
+          is_defended = true;
+          return true;
+        }
+      }
+
+      if (pos->x - 1 >= 0 && pos->y - 1 >= 0) {
+        Pos* target = board->at(pos->x - 1, pos->y - 1);
+        if (temp == target) {
+          is_defended = true;
+          return true;
+        }
+      }
+    }else if (piece->ch() == 'p'){
+      if (pos->x + 1 < 8 && pos->y + 1 < 8) {
+        Pos* target = board->at(pos->x + 1, pos->y + 1);
+        if (temp == target) {
+          is_defended = true;
+          return true;
+        }
+        if (target == this->pos) {
+          in_check = true;
+        }
+      }
+
+      if (pos->x - 1 >= 0 && pos->y + 1 < 8) {
+        Pos* target = board->at(pos->x - 1, pos->y + 1);
+        if (temp == target) {
+          is_defended = true;
+          return true;
+        }
+      }
+    }else {
+      for (Pos* pos : piece->valid_pos) {
+        if (pos == temp) {
+          is_defended = true;
+          return true;
+        }
+
+        if (pos == this->pos) {
+          in_check = true;
+        }
+      }
+    }
+  }
+
+  valid_pos.push_back(board->at(x,y));
+  return false;
 }
 
 void King::recompute() {
 
-  for (auto *p : valid_pos) {
-    delete p;
+  valid_pos.clear();
+
+  for (Piece* piece : (white) ? board->black->pieces : board->white->pieces) {
+    for (Pos* pos : piece->valid_pos) {
+      if (pos->p && pos == this->pos) {
+        in_check = true;
+      }
+    }
   }
+
+  check_expanded(pos->x + 1, pos->y);
+  check_expanded(pos->x - 1, pos->y);
+
+  check_expanded(pos->x, pos->y + 1);
+  check_expanded(pos->x, pos->y - 1);
+
+  check_expanded(pos->x - 1, pos->y - 1);
+  check_expanded(pos->x - 1, pos->y + 1);
+
+  check_expanded(pos->x + 1, pos->y - 1);
+  check_expanded(pos->x + 1, pos->y + 1);
+
+  if (in_check && valid_pos.empty()) {
+    board->mate = true;
+  }
+
+}
+
+void Pawn::update(Move &m) {
+  this->recompute();
+}
+
+void Pawn::recompute() {
 
   valid_pos.clear();
 
-  check_pos_and_handle_it(pos->x + 1, pos->y);
-  check_pos_and_handle_it(pos->x - 1, pos->y);
+  Pos* target = nullptr;
 
-  check_pos_and_handle_it(pos->x, pos->y + 1);
-  check_pos_and_handle_it(pos->x, pos->y - 1);
+  // moving
+  if (white) {
 
-  check_pos_and_handle_it(pos->x - 1, pos->y - 1);
-  check_pos_and_handle_it(pos->x - 1, pos->y + 1);
+    if (pos->y - 1 >= 0) {
+      target = board->at(pos->x, pos->y - 1);
+      if (!target->p)valid_pos.push_back(target);
+    }
 
-  check_pos_and_handle_it(pos->x + 1, pos->y - 1);
-  check_pos_and_handle_it(pos->x + 1, pos->y + 1);
+    if (in_start_pos) {
+      if (pos->y - 2 >= 0) {
+        target = board->at(pos->x, pos->y - 2);
+        if (!target->p) {
+          valid_pos.push_back(target);
+        }
+      }
+    }
+
+
+    // capture
+    if (pos->x + 1 < 8 && pos->y - 1 >= 0) {
+      target = board->at(pos->x + 1, pos->y - 1);
+      if (target->p && target->p->white != this->white) {
+        valid_pos.push_back(target->p->pos);
+      }
+
+    }
+
+    if (pos->x - 1 >= 0 && pos->y - 1 >= 0) {
+      target = board->at(pos->x - 1, pos->y - 1);
+      if (target->p && target->p->white != this->white) {
+        valid_pos.push_back(target->p->pos);
+      }
+    }
+  }else {
+
+    if (pos->y + 1 < 8) {
+      target = board->at(pos->x, pos->y + 1);
+      if (!target->p)valid_pos.push_back(target);
+    }
+
+    if (in_start_pos) {
+      if (pos->y + 2 < 8) {
+        target = board->at(pos->x, pos->y + 2);
+        if (!target->p) {
+          valid_pos.push_back(target);
+        }
+      }
+    }
+
+
+    // capture
+    if (pos->x + 1 < 8 && pos->y + 1 < 8) {
+      target = board->at(pos->x + 1, pos->y + 1);
+      if (target->p && target->p->white != this->white) {
+        valid_pos.push_back(target->p->pos);
+      }
+    }
+
+    if (pos->x - 1 >= 0 && pos->y + 1 < 8) {
+      target = board->at(pos->x - 1, pos->y + 1);
+      if (target->p && target->p->white != this->white) {
+        valid_pos.push_back(target->p->pos);
+      }
+    }
+  }
+
 }

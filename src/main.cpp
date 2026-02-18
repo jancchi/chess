@@ -19,9 +19,24 @@ using namespace std;
 //*******************************************************************************************************************************************************************
 //*/
 
+
+// Problems in King recompute diagonal
+
+Chessboard *Piece::board = nullptr;
+
+Chessboard *Pawn::board = nullptr;
+
 Chessboard *Rook::board = nullptr;
 
 Chessboard *Bishop::board = nullptr;
+
+Chessboard *Knight::board = nullptr;
+
+Chessboard *Queen::board = nullptr;
+
+Chessboard *King::board = nullptr;
+
+//Chessboard *Bishop::board = nullptr;
 
 int main() {
   sf::Font font;
@@ -39,6 +54,8 @@ int main() {
 
   Chessboard board(&g);
 
+  Piece::board = &board;
+  Pawn::board = &board;
   Rook::board = &board;
   Bishop::board = &board;
   Queen::board = &board;
@@ -82,7 +99,37 @@ int main() {
     i++;
   }
 
+  bool is_white = true;
+  Pos* selected = nullptr;
   while (entry.isOpen()) {
+    bool pixel_white = true;
+    for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 8; j++) {
+        Pos* curr = board.at(i, j);
+
+        curr->rect.setFillColor(
+            (pixel_white) ? sf::Color(138, 138, 138, 255)
+                          : sf::Color(200, 50, 0, 255));
+        pixel_white = !pixel_white;
+      }
+      pixel_white = !pixel_white;
+    }
+    if (selected) {
+      selected->rect.setFillColor(sf::Color::Black);
+
+      for (Pos* p : selected->p->valid_pos) {
+        p->rect.setFillColor(sf::Color::Green);
+      }
+    }
+
+    for (Pos *p : board.white->king->valid_pos) {
+      p->rect.setFillColor(sf::Color::Blue);
+    }
+
+    for (Pos *p : board.black->king->valid_pos) {
+      p->rect.setFillColor(sf::Color::Magenta);
+    }
+
     sf::Event event;
     while (entry.pollEvent(event)) {
       if (event.type == sf::Event::Closed)
@@ -93,17 +140,41 @@ int main() {
       }
 
       if (event.type == sf::Event::MouseButtonPressed) {
-        board.at(get_pos(sf::Mouse::getPosition(), &entry))
-            ->rect.setFillColor(sf::Color::Blue);
+        Pos* curr = board.at(get_pos(sf::Mouse::getPosition(), &entry));
+        curr->rect.setFillColor(sf::Color::Blue);
+
+        if (selected) {
+          if (selected->p->is_valid(curr)){
+            selected->p->move(curr);
+            board.white->king->recompute();
+            board.black->king->recompute();
+            selected = nullptr;
+            is_white = !is_white;
+          }else {
+            cout << "\nYou cant go there";
+            // disable for testing
+            selected = nullptr;
+          }
+        }else {
+          if (curr->p && curr->p->white == is_white) {
+            selected = curr;
+            selected->rect.setFillColor(sf::Color::Black);
+            cout << "\nSelected piece: " << selected->p->ch();
+          }else {
+            cout << "\nNo piece to pick up";
+          }
+        }
       }
     }
 
     entry.clear();
 
     for (vector<Pos *> &v : board.grid->pixels) {
-      for (Pos *p : v) {
-        entry.draw(p->rect);
-        entry.draw(p->p->sprite);
+      for (Pos *pos : v) {
+        entry.draw(pos->rect);
+        if (pos->p) {
+          entry.draw(pos->p->sprite);
+        }
       }
     }
 

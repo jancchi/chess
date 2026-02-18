@@ -99,11 +99,15 @@ int main() {
     i++;
   }
 
+
+
+
+
   bool is_white = true;
   Pos* selected = nullptr;
   while (entry.isOpen()) {
     bool pixel_white = true;
-    for (int i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) {
       for (int j = 0; j < 8; j++) {
         Pos* curr = board.at(i, j);
 
@@ -146,8 +150,6 @@ int main() {
         if (selected) {
           if (selected->p->is_valid(curr)){
             selected->p->move(curr);
-            board.white->king->recompute();
-            board.black->king->recompute();
             selected = nullptr;
             is_white = !is_white;
           }else {

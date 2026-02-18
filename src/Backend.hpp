@@ -155,7 +155,7 @@ public:
 
   bool in_check = false;
 
-  bool check_expanded(int x, int y);
+  bool check_and_handle_expanded(int x, int y);
 
   King(bool white, Pos *pos);
 

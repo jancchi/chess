@@ -154,7 +154,7 @@ void Chessboard::init(Player *white, Player *black) {
     }
     pixel_white = !pixel_white;
   }
-/*
+  // /*
   this->white->pieces.resize(16);
   this->black->pieces.resize(16);
 
@@ -188,7 +188,9 @@ void Chessboard::init(Player *white, Player *black) {
 
   this->white->king = dynamic_cast<King*>(this->white->pieces.at(7));
   this->black->king = dynamic_cast<King*>(this->black->pieces.at(7));
-*/
+  // */
+
+  /*
   King* wking = new King(true, at(get_num('d'), 4));
   this->white->pieces.push_back(wking);
   this->white->king = wking;
@@ -197,8 +199,9 @@ void Chessboard::init(Player *white, Player *black) {
   this->white->pieces.push_back(bking);
   this->black->king = bking;
 
-  Pawn* wpawn = new Pawn(true, at(get_num('d'), 2));
-  this->white->pieces.push_back(wpawn);
+  Pawn* bpawn = new Pawn(false, at(get_num('d'), 2));
+  this->black->pieces.push_back(bpawn);
+  */
 
   for (Piece* p : this->black->pieces) {
     p->recompute();
@@ -539,7 +542,8 @@ void King::update(Move &m) {
   this->recompute();
 }
 
-bool King::check_expanded(int x, int y) {
+// returns true when failed
+bool King::check_and_handle_expanded(int x, int y) {
 
   if (x < 0 || x >= 8 || y < 0 || y >= 8) {
     return true;
@@ -549,57 +553,43 @@ bool King::check_expanded(int x, int y) {
 
   if (temp->p) {
     if (temp->p->white == white) {
-      return true;
+      return false;
     }
   }
-
-  bool is_defended = false;
 
   for (Piece* piece : (white) ? board->black->pieces : board->white->pieces) {
     if (piece->ch() == 'P') {
       if (piece->pos->x + 1 < 8 && piece->pos->y - 1 >= 0) {
-        Pos* target = board->at(pos->x + 1, pos->y - 1);
+        Pos* target = board->at(piece->pos->x + 1, piece->pos->y - 1);
         if (temp == target) {
-          is_defended = true;
-          return true;
+          return false;
         }
       }
 
-      if (pos->x - 1 >= 0 && pos->y - 1 >= 0) {
-        Pos* target = board->at(pos->x - 1, pos->y - 1);
+      if (piece->pos->x - 1 >= 0 && piece->pos->y - 1 >= 0) {
+        Pos* target = board->at(piece->pos->x - 1, piece->pos->y - 1);
         if (temp == target) {
-          is_defended = true;
-          return true;
+          return false;
         }
       }
     }else if (piece->ch() == 'p'){
-      if (pos->x + 1 < 8 && pos->y + 1 < 8) {
-        Pos* target = board->at(pos->x + 1, pos->y + 1);
+      if (piece->pos->x + 1 < 8 && piece->pos->y + 1 < 8) {
+        Pos* target = board->at(piece->pos->x + 1, piece->pos->y + 1);
         if (temp == target) {
-          is_defended = true;
-          return true;
-        }
-        if (target == this->pos) {
-          in_check = true;
+          return false;
         }
       }
 
-      if (pos->x - 1 >= 0 && pos->y + 1 < 8) {
-        Pos* target = board->at(pos->x - 1, pos->y + 1);
+      if (piece->pos->x - 1 >= 0 && piece->pos->y + 1 < 8) {
+        Pos* target = board->at(piece->pos->x - 1, piece->pos->y + 1);
         if (temp == target) {
-          is_defended = true;
-          return true;
+          return false;
         }
       }
     }else {
       for (Pos* pos : piece->valid_pos) {
         if (pos == temp) {
-          is_defended = true;
-          return true;
-        }
-
-        if (pos == this->pos) {
-          in_check = true;
+          return false;
         }
       }
     }
@@ -621,17 +611,17 @@ void King::recompute() {
     }
   }
 
-  check_expanded(pos->x + 1, pos->y);
-  check_expanded(pos->x - 1, pos->y);
+  check_and_handle_expanded(pos->x + 1, pos->y);
+  check_and_handle_expanded(pos->x - 1, pos->y);
 
-  check_expanded(pos->x, pos->y + 1);
-  check_expanded(pos->x, pos->y - 1);
+  check_and_handle_expanded(pos->x, pos->y + 1);
+  check_and_handle_expanded(pos->x, pos->y - 1);
 
-  check_expanded(pos->x - 1, pos->y - 1);
-  check_expanded(pos->x - 1, pos->y + 1);
+  check_and_handle_expanded(pos->x - 1, pos->y - 1);
+  check_and_handle_expanded(pos->x - 1, pos->y + 1);
 
-  check_expanded(pos->x + 1, pos->y - 1);
-  check_expanded(pos->x + 1, pos->y + 1);
+  check_and_handle_expanded(pos->x + 1, pos->y - 1);
+  check_and_handle_expanded(pos->x + 1, pos->y + 1);
 
   if (in_check && valid_pos.empty()) {
     board->mate = true;

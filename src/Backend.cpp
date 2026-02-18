@@ -154,7 +154,7 @@ void Chessboard::init(Player *white, Player *black) {
     }
     pixel_white = !pixel_white;
   }
-  // /*
+ // /*
   this->white->pieces.resize(16);
   this->black->pieces.resize(16);
 
@@ -188,7 +188,7 @@ void Chessboard::init(Player *white, Player *black) {
 
   this->white->king = dynamic_cast<King*>(this->white->pieces.at(7));
   this->black->king = dynamic_cast<King*>(this->black->pieces.at(7));
-  // */
+  //*/
 
   /*
   King* wking = new King(true, at(get_num('d'), 4));
@@ -201,7 +201,11 @@ void Chessboard::init(Player *white, Player *black) {
 
   Pawn* bpawn = new Pawn(false, at(get_num('d'), 2));
   this->black->pieces.push_back(bpawn);
-  */
+
+  Queen* wqueen = new Queen(true, at( get_num('g'), 5));
+  this->white->pieces.push_back(wqueen);
+
+  //*/
 
   for (Piece* p : this->black->pieces) {
     p->recompute();
@@ -238,11 +242,14 @@ void Chessboard::show() const {
 
 void Chessboard::handle_move(Move m) {
   for (Piece *p : white->pieces) {
-      p->update(m);
+      if (p->ch() != 'K')p->update(m);
   }
   for (Piece *p : black->pieces) {
-      p->update(m);
+      if (p->ch() != 'k')p->update(m);
   }
+
+  white->king->recompute();
+  white->king->recompute();
 }
 
 
@@ -339,7 +346,6 @@ bool Piece::check_pos_and_handle_it(int x, int y) {
 
   if (target->p) {
     if (target->p->white != this->white) {
-            board->white->king->recompute();
       valid_pos.push_back(target->p->pos);
     }
     return true;
@@ -557,76 +563,27 @@ bool King::check_and_handle_expanded(int x, int y) {
     }
   }
 
-  for (Piece* piece : (white) ? board->black->pieces : board->white->pieces) {
-    if (piece->ch() == 'P') {
-      if (piece->pos->x + 1 < 8 && piece->pos->y - 1 >= 0) {
-        Pos* target = board->at(piece->pos->x + 1, piece->pos->y - 1);
-        if (temp == target) {
-          return false;
-        }
-      }
-
-      if (piece->pos->x - 1 >= 0 && piece->pos->y - 1 >= 0) {
-        Pos* target = board->at(piece->pos->x - 1, piece->pos->y - 1);
-        if (temp == target) {
-          return false;
-        }
-      }
-    }else if (piece->ch() == 'p'){
-      if (piece->pos->x + 1 < 8 && piece->pos->y + 1 < 8) {
-        Pos* target = board->at(piece->pos->x + 1, piece->pos->y + 1);
-        if (temp == target) {
-          return false;
-        }
-      }
-
-      if (piece->pos->x - 1 >= 0 && piece->pos->y + 1 < 8) {
-        Pos* target = board->at(piece->pos->x - 1, piece->pos->y + 1);
-        if (temp == target) {
-          return false;
-        }
-      }
-    }else {
-      for (Pos* pos : piece->valid_pos) {
-        if (pos == temp) {
-          return false;
-        }
-      }
-    }
+  if (!board->is_attacked(x, y, !white)) {
+    valid_pos.push_back(temp);
   }
 
-  valid_pos.push_back(board->at(x,y));
   return false;
 }
 
 void King::recompute() {
 
   valid_pos.clear();
+  in_check = false;
 
-  for (Piece* piece : (white) ? board->black->pieces : board->white->pieces) {
-    for (Pos* pos : piece->valid_pos) {
-      if (pos->p && pos == this->pos) {
-        in_check = true;
-      }
+  for (int i = -1; i <= 1; i++) {
+    for (int j = -1; j <= 1; j++) {
+      check_and_handle_expanded(pos->x + i, pos->y + j);
     }
   }
 
-  check_and_handle_expanded(pos->x + 1, pos->y);
-  check_and_handle_expanded(pos->x - 1, pos->y);
-
-  check_and_handle_expanded(pos->x, pos->y + 1);
-  check_and_handle_expanded(pos->x, pos->y - 1);
-
-  check_and_handle_expanded(pos->x - 1, pos->y - 1);
-  check_and_handle_expanded(pos->x - 1, pos->y + 1);
-
-  check_and_handle_expanded(pos->x + 1, pos->y - 1);
-  check_and_handle_expanded(pos->x + 1, pos->y + 1);
-
-  if (in_check && valid_pos.empty()) {
-    board->mate = true;
+  if (board->is_attacked(pos->x,pos->y, !white)) {
+    in_check = true;
   }
-
 }
 
 void Pawn::update(Move &m) {

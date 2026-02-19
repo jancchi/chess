@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/admin/git/Chess/build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

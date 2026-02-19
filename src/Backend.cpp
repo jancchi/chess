@@ -154,7 +154,7 @@ void Chessboard::init(Player *white, Player *black) {
     }
     pixel_white = !pixel_white;
   }
- // /*
+  ///*
   this->white->pieces.resize(16);
   this->black->pieces.resize(16);
 
@@ -179,8 +179,8 @@ void Chessboard::init(Player *white, Player *black) {
   this->black->pieces.at(3) = new Bishop(false, at(get_num('f'), 0));
   this->black->pieces.at(4) = new Knight(false, at(get_num('b'), 0));
   this->black->pieces.at(5) = new Knight(false, at(get_num('g'), 0));
-  this->black->pieces.at(6) = new Queen(false, at(get_num('e'), 0));
-  this->black->pieces.at(7) = new King(false, at(get_num('d'), 0));
+  this->black->pieces.at(6) = new Queen(false, at(get_num('d'), 0));
+  this->black->pieces.at(7) = new King(false, at(get_num('e'), 0));
 
   for (int i =0;i<8;i++) {
     this->black->pieces.at(8 + i) = new Pawn(false, at(i,1));
@@ -205,7 +205,7 @@ void Chessboard::init(Player *white, Player *black) {
   Queen* wqueen = new Queen(true, at( get_num('g'), 5));
   this->white->pieces.push_back(wqueen);
 
-  //*/
+  // */
 
   for (Piece* p : this->black->pieces) {
     p->recompute();
@@ -249,7 +249,7 @@ void Chessboard::handle_move(Move m) {
   }
 
   white->king->recompute();
-  white->king->recompute();
+  black->king->recompute();
 }
 
 

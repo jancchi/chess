@@ -255,7 +255,7 @@ public:
   void handle_move(Move m);
 
   [[nodiscard("Dont forget to use the result")]]
-  bool is_on_board(int x, int y) const {
+  static bool is_on_board(int x, int y) {
     return (x >= 0 && x < 8 && y >= 0 && y < 8);
   }
 
@@ -304,33 +304,12 @@ public:
       for (int j =1; j < 8; j++) {
         int new_x = x + directions[i].x * j;
         int new_y = y + directions[i].y * j;
-        if (j == 1) {
-          if (is_on_board(new_x, new_y) && at(new_x, new_y)->p) {
-            if(at(new_x,new_y)->p->ch() == (attacker_white ? 'K' : 'k')) {
-              return true;
-            }
-          }
-        }
-        if (i < 4) {
-          if (is_on_board(new_x, new_y) && at(new_x, new_y)->p) {
-            if(at(new_x,new_y)->p->ch() == (attacker_white ? 'R' : 'r')) {
-              return true;
-            }
-          }
-        }
-        else {
-          if (is_on_board(new_x, new_y) && at(new_x, new_y)->p) {
-            if(at(new_x,new_y)->p->ch() == (attacker_white ? 'B' : 'b')) {
-              return true;
-            }
-          }
-        }
-
         if (is_on_board(new_x, new_y) && at(new_x, new_y)->p) {
-          if(at(new_x,new_y)->p->ch() == (attacker_white ? 'Q' : 'q')) {
-            return true;
-          }
-          break;
+          if(j == 1 && at(new_x,new_y)->p->ch() == (attacker_white ? 'K' : 'k')) return true;
+          if(i < 4 && at(new_x,new_y)->p->ch() == (attacker_white ? 'R' : 'r'))  return true;
+          if(i > 3 && at(new_x,new_y)->p->ch() == (attacker_white ? 'B' : 'b'))  return true;
+          if(at(new_x,new_y)->p->ch() == (attacker_white ? 'Q' : 'q'))           return true;
+          if(at(new_x,new_y)->p->ch() != (attacker_white ? 'k' : 'K'))break;
         }
       }
     }

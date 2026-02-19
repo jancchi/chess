@@ -149,7 +149,14 @@ int main() {
 
         if (selected) {
           if (selected->p->is_valid(curr)){
-            selected->p->move(curr);
+            Pos* prev = selected;
+            Piece* p_prev = selected->p;
+            p_prev->move(curr);
+            if ((is_white) ? board.white->king->in_check : board.black->king->in_check) {
+              cerr << "\nYou are in check";
+              p_prev->move(prev);
+              is_white = !is_white;
+            }
             selected = nullptr;
             is_white = !is_white;
           }else {
